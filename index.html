@@ -1596,19 +1596,20 @@
     /* ==========================================================================
        7. ВИДЕО ПЛЕЕР КОМПОНЕНТІ (intro.mp4, Energy.mp4, final.mp4)
        ========================================================================== */
+    const videoLocalUrls = {};
     function renderVideoPlayerHTML(playerId, fileName, title, onEndCallbackName) {
         return `
         <div class="video-theatre" id="${playerId}-box">
             <div class="video-aspect-box">
-                <video id="${playerId}" src="${fileName}" controls playsinline preload="metadata"
+                <video id="${playerId}" ${videoLocalUrls[playerId] ? `src="${videoLocalUrls[playerId]}"` : ""} controls playsinline preload="none" oncanplay="document.getElementById('${playerId}-fallback').style.display='none'"
                     onended="${onEndCallbackName}()"
                     onerror="handleVideoError('${playerId}', '${fileName}')">
                 </video>
-                <div class="video-fallback-overlay" id="${playerId}-fallback" style="display: none;">
+                <div class="video-fallback-overlay" id="${playerId}-fallback" style="display: ${videoLocalUrls[playerId] ? 'none' : 'flex'};">
                     <div style="font-size: 46px;">🎬</div>
-                    <h3 style="color: var(--gold-light); font-size: 1.35rem;">«${fileName}» видео файлы табылмады</h3>
+                    <h3 style="color: var(--gold-light); font-size: 1.35rem;">${title} — видеоны таңдаңыз</h3>
                     <p style="color: var(--text-muted); max-width: 540px;">
-                        Файлды <b>index.html</b> орналасқан папкаға салыңыз немесе төмендегі батырма арқылы компьютерден таңдаңыз:
+                        Төмендегі батырма арқылы компьютерден <b>${fileName}</b> файлын таңдаңыз:
                     </p>
                     <div style="display: flex; gap: 12px; flex-wrap: wrap; justify-content: center;">
                         <label class="btn btn-gold" style="cursor: pointer;">
@@ -1643,7 +1644,9 @@
         if (!file) return;
         const vid = document.getElementById(playerId);
         const fb = document.getElementById(`${playerId}-fallback`);
-        vid.src = URL.createObjectURL(file);
+        if (videoLocalUrls[playerId]) URL.revokeObjectURL(videoLocalUrls[playerId]);
+        videoLocalUrls[playerId] = URL.createObjectURL(file);
+        vid.src = videoLocalUrls[playerId];
         if (fb) fb.style.display = 'none';
         vid.play().catch(() => {});
     }
@@ -1652,7 +1655,7 @@
         const vid = document.getElementById(playerId);
         if (!vid) return;
         if (action === 'play') {
-            vid.play().catch(() => handleVideoError(playerId));
+            vid.play().catch(() => { if (vid.error) handleVideoError(playerId); else showToast("Ойнату батырмасын қайта басыңыз"); });
         } else if (action === 'pause') {
             vid.pause();
         } else if (action === 'replay') {
@@ -1794,7 +1797,7 @@
         renderAll();
         setTimeout(() => {
             const vid = document.getElementById('intro-video');
-            if (vid) {
+            if (vid && videoLocalUrls['intro-video']) {
                 vid.play().catch(() => {
                     showToast('Видеоны ойнату үшін «▶ Ойнату» батырмасын басыңыз');
                 });
@@ -3380,7 +3383,7 @@
         renderAll();
         setTimeout(() => {
             const vid = document.getElementById('final-video');
-            if (vid) vid.play().catch(() => {});
+            if (vid && videoLocalUrls['final-video']) vid.play().catch(() => {});
         }, 150);
     }
 
